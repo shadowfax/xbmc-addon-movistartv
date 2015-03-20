@@ -289,33 +289,6 @@ AC_CONFIG_FILES([Makefile \
                  lib/tinyxml/Makefile \
                  lib/tinyxml2/Makefile \
                  addons/Makefile \
-                 addons/pvr.argustv/Makefile \
-                 addons/pvr.demo/Makefile \
-                 addons/pvr.dvblink/Makefile \
-                 addons/pvr.dvbviewer/Makefile \
-                 addons/pvr.filmon/Makefile \
-                 addons/pvr.hts/Makefile \
-                 addons/pvr.iptvsimple/Makefile \
-                 addons/pvr.mediaportal.tvserver/Makefile \
-                 addons/pvr.mythtv/Makefile \
-                 addons/pvr.nextpvr/Makefile \
-                 addons/pvr.njoy/Makefile \
-                 addons/pvr.vdr.vnsi/Makefile \
-                 addons/pvr.vuplus/Makefile \
-                 addons/pvr.wmc/Makefile \
-                 addons/pvr.argustv/addon/addon.xml
-                 addons/pvr.demo/addon/addon.xml
-                 addons/pvr.dvblink/addon/addon.xml
-                 addons/pvr.dvbviewer/addon/addon.xml
-                 addons/pvr.filmon/addon/addon.xml
-                 addons/pvr.hts/addon/addon.xml
-                 addons/pvr.iptvsimple/addon/addon.xml
-                 addons/pvr.mediaportal.tvserver/addon/addon.xml
-                 addons/pvr.mythtv/addon/addon.xml
-                 addons/pvr.nextpvr/addon/addon.xml
-                 addons/pvr.njoy/addon/addon.xml
-                 addons/pvr.vdr.vnsi/addon/addon.xml
-                 addons/pvr.vuplus/addon/addon.xml
-                 addons/pvr.wmc/addon/addon.xml])
+                 addons/pvr.movistartv/Makefile])
 
 AC_OUTPUT
