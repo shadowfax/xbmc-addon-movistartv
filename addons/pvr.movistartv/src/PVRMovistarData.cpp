@@ -22,23 +22,28 @@
 
 #include "tinyxml/XMLUtils.h"
 #include "PVRMovistarData.h"
+#include "MovistarTVRPC.h"
 
 using namespace std;
 using namespace ADDON;
 
 PVRMovistarData::PVRMovistarData(void)
 {
-  m_iEpgStart = -1;
-  m_strDefaultIcon =  "http://www.royalty-free.tv/news/wp-content/uploads/2011/06/cc-logo1.jpg";
-  m_strDefaultMovie = "";
+	m_iEpgStart = -1;
+	m_strDefaultIcon =  "http://3.bp.blogspot.com/-YmOxQO5QR1E/U_2J07e6eXI/AAAAAAAAAhw/_PWsrnm9xzU/s1600/movistartv.jpg";
+	m_strDefaultMovie = "";
 
-  LoadDemoData();
+	if (!LoadMovistarData()) {
+		/* Load last known configuration */
+		XBMC->Log(LOG_DEBUG, "Loading fallback data\n");
+		LoadFallbackData();
+	}
 }
 
 PVRMovistarData::~PVRMovistarData(void)
 {
-  m_channels.clear();
-  m_groups.clear();
+	m_channels.clear();
+	m_groups.clear();
 }
 
 std::string PVRMovistarData::GetSettingsFile() const
@@ -52,7 +57,31 @@ std::string PVRMovistarData::GetSettingsFile() const
   return settingFile;
 }
 
-bool PVRMovistarData::LoadDemoData(void)
+bool PVRMovistarData::LoadMovistarData(void)
+{
+	MovistarTV::ClientProfile client_profile;
+	MovistarTV::PlatformProfile platform_profile;
+
+	if (MovistarTV::GetClientProfile(client_profile) != 0) {
+		XBMC->Log(LOG_ERROR, "Error getting the client profile\n");
+		return false;
+	}
+	XBMC->Log(LOG_DEBUG, "User demarcation: %d\n", client_profile.demarcation);
+	
+	if (MovistarTV::GetPlatformProfile(platform_profile) != 0) {
+		XBMC->Log(LOG_ERROR, "Error getting the platform profile\n");
+		return false;
+	}
+	XBMC->Log(LOG_DEBUG, "DVB Entry Point: %s\n", platform_profile.dvbConfig.dvbEntryPoint.c_str());
+
+	/* We should now do the multicast stuff on the DVB Entry Point */
+
+	/* TODO: Until we finish the code we shall return false */
+	//return true;
+	return false;
+}
+
+bool PVRMovistarData::LoadFallbackData(void)
 {
   TiXmlDocument xmlDoc;
   string strSettingsFile = GetSettingsFile();

@@ -117,7 +117,8 @@ public:
 
   virtual std::string GetSettingsFile() const;
 protected:
-  virtual bool LoadDemoData(void);
+  virtual bool LoadFallbackData(void);
+  virtual bool LoadMovistarData(void);
 private:
   std::vector<PVRMovistarChannelGroup> m_groups;
   std::vector<PVRMovistarChannel>      m_channels;
