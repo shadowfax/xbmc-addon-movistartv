@@ -96,7 +96,7 @@ namespace MovistarTV {
 	{
 		Json::Value json_response;
 		Json::Value t_value;
-		int retval = E_FAIL;
+		int retval = E_FAILED;
 
 		retval = MovistarTVJSONRPC("http://172.26.22.23:2001/appserver/mvtv.do?action=getClientProfile", json_response);
 		if (retval != E_SUCCESS) {
@@ -136,7 +136,7 @@ namespace MovistarTV {
 		Json::Value json_response;
 		Json::Value t_value;
 		Json::Value tt_value;
-		int retval = E_FAIL;
+		int retval = E_FAILED;
 
 		retval = MovistarTVJSONRPC("http://172.26.22.23:2001/appserver/mvtv.do?action=getPlatformProfile", json_response);
 		if (retval != E_SUCCESS) {
