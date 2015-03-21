@@ -14,7 +14,7 @@ LIBS            = @abs_top_srcdir@/lib/tinyxml/libtinyxml.la
 
 include ../Makefile.include.am
 
-libpvrdemo_addon_la_SOURCES = src/client.cpp \
+libpvrmovistartv_addon_la_SOURCES = src/client.cpp \
                               src/PVRMovistarData.cpp
-libpvrdemo_addon_la_LDFLAGS = @TARGET_LDFLAGS@
+libpvrmovistartv_addon_la_LDFLAGS = @TARGET_LDFLAGS@
 
