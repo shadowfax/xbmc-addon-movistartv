@@ -289,6 +289,7 @@ AC_CONFIG_FILES([Makefile \
                  lib/tinyxml/Makefile \
                  lib/tinyxml2/Makefile \
                  addons/Makefile \
-                 addons/pvr.movistartv/Makefile])
+                 addons/pvr.movistartv/Makefile \
+				 addons/pvr.movistartv/addon/addon.xml])
 
 AC_OUTPUT
