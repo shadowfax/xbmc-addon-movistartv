@@ -205,6 +205,7 @@ namespace MovistarTV
 			}
 
 			/* Cache */
+			/*
 			std::string settingFile = g_strClientPath;
 			if (settingFile.at(settingFile.size() - 1) == '\\' ||
 				settingFile.at(settingFile.size() - 1) == '/')
@@ -212,10 +213,10 @@ namespace MovistarTV
 			else
 				settingFile.append("/ServiceProviderDiscovery.xml");
   
-			XBMC->Log(LOG_NOTICE, "Writing to %s\n", settingFile.c_str());
 			std::ofstream out(settingFile);
 			out << raw_xml;
 			out.close();
+			*/
 
 			xml_document<> xmlDoc;
 			try 
@@ -340,7 +341,7 @@ namespace MovistarTV
 			}
 
 			/* Cache */
-			/* Cache */
+			/*
 			std::string settingFile = g_strClientPath;
 			if (settingFile.at(settingFile.size() - 1) == '\\' ||
 				settingFile.at(settingFile.size() - 1) == '/')
@@ -348,10 +349,10 @@ namespace MovistarTV
 			else
 				settingFile.append("/BroadcastDiscovery.xml");
   
-			XBMC->Log(LOG_NOTICE, "Writing to %s\n", settingFile.c_str());
 			std::ofstream out(settingFile);
 			out << raw_xml;
 			out.close();
+			*/
 
 			xml_document<> xmlDoc;
 			try 
