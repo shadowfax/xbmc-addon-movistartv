@@ -299,7 +299,9 @@ namespace MovistarTV
 								} 
 								else 
 								{
-									push_offering.port = std::stoi(pPushPortAttribute->value());
+									/*push_offering.port = std::stoi(pPushPortAttribute->value());*/
+									std::string port_value = pPushPortAttribute->value();
+									push_offering.port = atoi(port_value.c_str());
 								}
 
 								got_push = true;
@@ -433,7 +435,9 @@ namespace MovistarTV
 				{
 					continue;
 				}
-				channel.serviceName = std::stoi(pServiceNameAttribute->value());
+				/*channel.serviceName = std::stoi(pServiceNameAttribute->value());*/
+				std::string service_name_value = pServiceNameAttribute->value();
+				channel.serviceName = atoi(service_name_value.c_str());
 
 				xml_attribute<> *pLogoUriAttribute = pTextualIdentifierElement->first_attribute("logoURI");
 				if (!pLogoUriAttribute)
