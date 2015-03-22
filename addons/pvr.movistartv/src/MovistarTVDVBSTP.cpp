@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <sstream>
 
 using namespace ADDON;
 using namespace rapidxml;
@@ -132,7 +133,7 @@ namespace MovistarTV
 			{
 				struct sd_s_hdr_t header;
 				int addrlen = sizeof(addr);
-				int nBytes = recvfrom(sd, databuf, 4096, 0, (struct sockaddr *) &addr, &addrlen);
+				int nBytes = recvfrom(sd, databuf, 4096, 0, (struct sockaddr *) &addr, (socklen_t *)&addrlen);
 				if (nBytes <= 0) {
 					// TODO: set a timeout for the function
 					lost_packets++;
@@ -246,12 +247,13 @@ namespace MovistarTV
 			bool demarcation_found = false;
 			bool got_push = false;
 			std::string my_domain_name;
-			char client_demarcation_buf[6];
-			memset(&client_demarcation_buf, 0, 6);
-			itoa(client.demarcation, client_demarcation_buf, 10);
+			std::string client_demarcation;
+			std::stringstream out;
+			out << client.demarcation;
+			client_demarcation = out.str();
 			my_domain_name.clear();
 			my_domain_name.append("DEM_");
-			my_domain_name.append(client_demarcation_buf);
+			my_domain_name.append(client_demarcation);
 			my_domain_name.append(".");
 			my_domain_name.append(platform.dvbConfig.dvbServiceProvider);
 			XBMC->Log(LOG_DEBUG, "Searching for %s\n", my_domain_name.c_str());
