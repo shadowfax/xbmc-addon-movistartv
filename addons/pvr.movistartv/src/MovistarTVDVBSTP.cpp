@@ -2,6 +2,7 @@
 #include "PVRMovistarData.h"
 #include "MovistarTVDVBSTP.h"
 #include "rapidxml/rapidxml.hpp"
+#include <iostream>
 #include <string>
 #include <vector>
 #include <fstream>
