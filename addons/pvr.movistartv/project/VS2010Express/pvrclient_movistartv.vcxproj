@@ -93,11 +93,13 @@ if errorlevel 1 exit 0 else exit %errorlevel%</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\client.cpp" />
+    <ClCompile Include="..\..\src\MovistarTVDVBSTP.cpp" />
     <ClCompile Include="..\..\src\MovistarTVRPC.cpp" />
     <ClCompile Include="..\..\src\PVRMovistarData.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\client.h" />
+    <ClInclude Include="..\..\src\MovistarTVDVBSTP.h" />
     <ClInclude Include="..\..\src\MovistarTVRPC.h" />
     <ClInclude Include="..\..\src\PVRMovistarData.h" />
   </ItemGroup>

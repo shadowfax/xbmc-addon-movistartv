@@ -24,6 +24,7 @@
 #include <vector>
 #include "platform/util/StdString.h"
 #include "client.h"
+#include "MovistarTVDVBSTP.h"
 
 struct PVRMovistarEpgEntry
 {
@@ -117,7 +118,6 @@ public:
 
   virtual std::string GetSettingsFile() const;
 protected:
-  virtual bool LoadFallbackData(void);
   virtual bool LoadMovistarData(void);
 private:
   std::vector<PVRMovistarChannelGroup> m_groups;

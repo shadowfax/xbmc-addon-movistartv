@@ -23,6 +23,9 @@
 #include "tinyxml/XMLUtils.h"
 #include "PVRMovistarData.h"
 #include "MovistarTVRPC.h"
+#include "MovistarTVDVBSTP.h"
+#include <string>
+#include <fstream>
 
 using namespace std;
 using namespace ADDON;
@@ -35,9 +38,11 @@ PVRMovistarData::PVRMovistarData(void)
 
 	if (!LoadMovistarData()) {
 		/* Load last known configuration */
-		XBMC->Log(LOG_DEBUG, "Loading fallback data\n");
-		LoadFallbackData();
+		//XBMC->Log(LOG_DEBUG, "Loading fallback data\n");
+		//LoadFallbackData();
 	}
+
+	XBMC->Log(LOG_NOTICE, "Channels: %d\n", m_channels.size());
 }
 
 PVRMovistarData::~PVRMovistarData(void)
@@ -61,6 +66,7 @@ bool PVRMovistarData::LoadMovistarData(void)
 {
 	MovistarTV::ClientProfile client_profile;
 	MovistarTV::PlatformProfile platform_profile;
+	std::string xml_raw;
 
 	if (MovistarTV::GetClientProfile(client_profile) != 0) {
 		XBMC->Log(LOG_ERROR, "Error getting the client profile\n");
@@ -74,309 +80,64 @@ bool PVRMovistarData::LoadMovistarData(void)
 	}
 	XBMC->Log(LOG_DEBUG, "DVB Entry Point: %s\n", platform_profile.dvbConfig.dvbEntryPoint.c_str());
 
+	/* Split host and port */
+	int dvb_entry_point_port = 3937;
+	std:string dvb_entry_point_host;
+	size_t colonPos = platform_profile.dvbConfig.dvbEntryPoint.find(':');
+
+	if(colonPos != std::string::npos)
+	{
+		dvb_entry_point_host = platform_profile.dvbConfig.dvbEntryPoint.substr(0, colonPos);
+		std::string portPart = platform_profile.dvbConfig.dvbEntryPoint.substr(colonPos + 1);
+
+		dvb_entry_point_port = atoi(portPart.c_str());
+	}
+
 	/* We should now do the multicast stuff on the DVB Entry Point */
+	std::vector<MovistarTV::DVBSTP::DVBSTPPushOffering> service_provider_offerings;
+	service_provider_offerings = MovistarTV::DVBSTP::GetServiceProviderDiscovery(dvb_entry_point_host, dvb_entry_point_port, client_profile, platform_profile);
+	if (service_provider_offerings.size() <= 0) {
+		XBMC->Log(LOG_NOTICE, "GetServiceProviderDiscovery() returned no results\n");
+		return false;
+	}
+
+	for(int i = 0 ; i < service_provider_offerings.size() ; i++)
+	{
+		std::string offering_response;
+		std::vector<MovistarTV::DVBSTP::DVBSTPChannel> channels = MovistarTV::DVBSTP:: GetBroadcastDiscovery(service_provider_offerings[i].address, service_provider_offerings[i].port);
+
+		for(int j = 0 ; j < channels.size() ; j++) {
+			PVRMovistarChannel stdChannel;
+
+			stdChannel.bRadio = 0;
+			stdChannel.iChannelNumber = j + 1;
+			stdChannel.iEncryptionSystem = 0;
+			stdChannel.iSubChannelNumber = 0;
+			stdChannel.iUniqueId = channels[j].serviceName;
+			//stdChannel.iUniqueId = j + 1;
+			stdChannel.strChannelName = channels[j].name;
+			stdChannel.strIconPath = channels[j].logoUri;
+			stdChannel.strStreamURL = channels[j].streamUrl;
+
+			XBMC->Log(LOG_NOTICE, "Adding channel '%s' with stream %s ", stdChannel.strChannelName.c_str(), stdChannel.strStreamURL.c_str());
+			m_channels.push_back(stdChannel);
+		}
+
+		std::string raw_response;
+		//MovistarTV::DVBSTP::GetXmlFile(service_provider_offerings[i].address, service_provider_offerings[i].port, 5, raw_response);
+		//std::ofstream out("K:\output_05.txt");
+		//out << raw_response;
+		//out.close();
+		
+		//XBMC->Log(LOG_NOTICE, "Payload 2: %s\n", offering_response.c_str());
+    }
+	
+
+	
 
 	/* TODO: Until we finish the code we shall return false */
 	//return true;
 	return false;
-}
-
-bool PVRMovistarData::LoadFallbackData(void)
-{
-  TiXmlDocument xmlDoc;
-  string strSettingsFile = GetSettingsFile();
-
-  if (!xmlDoc.LoadFile(strSettingsFile))
-  {
-    XBMC->Log(LOG_ERROR, "invalid demo data (no/invalid data file found at '%s')", strSettingsFile.c_str());
-    return false;
-  }
-
-  TiXmlElement *pRootElement = xmlDoc.RootElement();
-  if (strcmp(pRootElement->Value(), "demo") != 0)
-  {
-    XBMC->Log(LOG_ERROR, "invalid demo data (no <demo> tag found)");
-    return false;
-  }
-
-  /* load channels */
-  int iUniqueChannelId = 0;
-  TiXmlElement *pElement = pRootElement->FirstChildElement("channels");
-  if (pElement)
-  {
-    TiXmlNode *pChannelNode = NULL;
-    while ((pChannelNode = pElement->IterateChildren(pChannelNode)) != NULL)
-    {
-      CStdString strTmp;
-      PVRMovistarChannel channel;
-      channel.iUniqueId = ++iUniqueChannelId;
-
-      /* channel name */
-      if (!XMLUtils::GetString(pChannelNode, "name", strTmp))
-        continue;
-      channel.strChannelName = strTmp;
-
-      /* radio/TV */
-      XMLUtils::GetBoolean(pChannelNode, "radio", channel.bRadio);
-
-      /* channel number */
-      if (!XMLUtils::GetInt(pChannelNode, "number", channel.iChannelNumber))
-        channel.iChannelNumber = iUniqueChannelId;
-
-      /* sub channel number */
-      if (!XMLUtils::GetInt(pChannelNode, "subnumber", channel.iSubChannelNumber))
-        channel.iSubChannelNumber = 0;
-
-      /* CAID */
-      if (!XMLUtils::GetInt(pChannelNode, "encryption", channel.iEncryptionSystem))
-        channel.iEncryptionSystem = 0;
-
-      /* icon path */
-      if (!XMLUtils::GetString(pChannelNode, "icon", strTmp))
-        channel.strIconPath = m_strDefaultIcon;
-      else
-        channel.strIconPath = strTmp;
-
-      /* stream url */
-      if (!XMLUtils::GetString(pChannelNode, "stream", strTmp))
-        channel.strStreamURL = m_strDefaultMovie;
-      else
-        channel.strStreamURL = strTmp;
-
-      m_channels.push_back(channel);
-    }
-  }
-
-  /* load channel groups */
-  int iUniqueGroupId = 0;
-  pElement = pRootElement->FirstChildElement("channelgroups");
-  if (pElement)
-  {
-    TiXmlNode *pGroupNode = NULL;
-    while ((pGroupNode = pElement->IterateChildren(pGroupNode)) != NULL)
-    {
-      CStdString strTmp;
-      PVRMovistarChannelGroup group;
-      group.iGroupId = ++iUniqueGroupId;
-
-      /* group name */
-      if (!XMLUtils::GetString(pGroupNode, "name", strTmp))
-        continue;
-      group.strGroupName = strTmp;
-
-      /* radio/TV */
-      XMLUtils::GetBoolean(pGroupNode, "radio", group.bRadio);
-
-      /* members */
-      TiXmlNode* pMembers = pGroupNode->FirstChild("members");
-      TiXmlNode *pMemberNode = NULL;
-      while (pMembers != NULL && (pMemberNode = pMembers->IterateChildren(pMemberNode)) != NULL)
-      {
-        int iChannelId = atoi(pMemberNode->FirstChild()->Value());
-        if (iChannelId > -1)
-          group.members.push_back(iChannelId);
-      }
-
-      m_groups.push_back(group);
-    }
-  }
-
-  /* load EPG entries */
-  pElement = pRootElement->FirstChildElement("epg");
-  if (pElement)
-  {
-    TiXmlNode *pEpgNode = NULL;
-    while ((pEpgNode = pElement->IterateChildren(pEpgNode)) != NULL)
-    {
-      CStdString strTmp;
-      int iTmp;
-      PVRMovistarEpgEntry entry;
-
-      /* broadcast id */
-      if (!XMLUtils::GetInt(pEpgNode, "broadcastid", entry.iBroadcastId))
-        continue;
-
-      /* channel id */
-      if (!XMLUtils::GetInt(pEpgNode, "channelid", iTmp))
-        continue;
-      PVRMovistarChannel &channel = m_channels.at(iTmp - 1);
-      entry.iChannelId = channel.iUniqueId;
-
-      /* title */
-      if (!XMLUtils::GetString(pEpgNode, "title", strTmp))
-        continue;
-      entry.strTitle = strTmp;
-
-      /* start */
-      if (!XMLUtils::GetInt(pEpgNode, "start", iTmp))
-        continue;
-      entry.startTime = iTmp;
-
-      /* end */
-      if (!XMLUtils::GetInt(pEpgNode, "end", iTmp))
-        continue;
-      entry.endTime = iTmp;
-
-      /* plot */
-      if (XMLUtils::GetString(pEpgNode, "plot", strTmp))
-        entry.strPlot = strTmp;
-
-      /* plot outline */
-      if (XMLUtils::GetString(pEpgNode, "plotoutline", strTmp))
-        entry.strPlotOutline = strTmp;
-
-      /* icon path */
-      if (XMLUtils::GetString(pEpgNode, "icon", strTmp))
-        entry.strIconPath = strTmp;
-
-      /* genre type */
-      XMLUtils::GetInt(pEpgNode, "genretype", entry.iGenreType);
-
-      /* genre subtype */
-      XMLUtils::GetInt(pEpgNode, "genresubtype", entry.iGenreSubType);
-
-      XBMC->Log(LOG_DEBUG, "loaded EPG entry '%s' channel '%d' start '%d' end '%d'", entry.strTitle.c_str(), entry.iChannelId, entry.startTime, entry.endTime);
-      channel.epg.push_back(entry);
-    }
-  }
-
-  /* load recordings */
-  iUniqueGroupId = 0; // reset unique ids
-  pElement = pRootElement->FirstChildElement("recordings");
-  if (pElement)
-  {
-    TiXmlNode *pRecordingNode = NULL;
-    while ((pRecordingNode = pElement->IterateChildren(pRecordingNode)) != NULL)
-    {
-      CStdString strTmp;
-      PVRMovistarRecording recording;
-
-      /* recording title */
-      if (!XMLUtils::GetString(pRecordingNode, "title", strTmp))
-        continue;
-      recording.strTitle = strTmp;
-
-      /* recording url */
-      if (!XMLUtils::GetString(pRecordingNode, "url", strTmp))
-        recording.strStreamURL = m_strDefaultMovie;
-      else
-        recording.strStreamURL = strTmp;
-
-      /* recording path */
-      if (XMLUtils::GetString(pRecordingNode, "directory", strTmp))
-        recording.strDirectory = strTmp;
-
-      iUniqueGroupId++;
-      strTmp.Format("%d", iUniqueGroupId);
-      recording.strRecordingId = strTmp;
-
-      /* channel name */
-      if (XMLUtils::GetString(pRecordingNode, "channelname", strTmp))
-        recording.strChannelName = strTmp;
-
-      /* plot */
-      if (XMLUtils::GetString(pRecordingNode, "plot", strTmp))
-        recording.strPlot = strTmp;
-
-      /* plot outline */
-      if (XMLUtils::GetString(pRecordingNode, "plotoutline", strTmp))
-        recording.strPlotOutline = strTmp;
-
-      /* genre type */
-      XMLUtils::GetInt(pRecordingNode, "genretype", recording.iGenreType);
-
-      /* genre subtype */
-      XMLUtils::GetInt(pRecordingNode, "genresubtype", recording.iGenreSubType);
-
-      /* duration */
-      XMLUtils::GetInt(pRecordingNode, "duration", recording.iDuration);
-
-      /* recording time */
-      if (XMLUtils::GetString(pRecordingNode, "time", strTmp))
-      {
-        time_t timeNow = time(NULL);
-        struct tm* now = localtime(&timeNow);
-
-        CStdString::size_type delim = strTmp.Find(':');
-        if (delim != CStdString::npos)
-        {
-          now->tm_hour = (int)strtol(strTmp.Left(delim), NULL, 0);
-          now->tm_min  = (int)strtol(strTmp.Mid(delim + 1), NULL, 0);
-          now->tm_mday--; // yesterday
-
-          recording.recordingTime = mktime(now);
-        }
-      }
-
-      m_recordings.push_back(recording);
-    }
-  }
-
-  /* load timers */
-  pElement = pRootElement->FirstChildElement("timers");
-  if (pElement)
-  {
-    TiXmlNode *pTimerNode = NULL;
-    while ((pTimerNode = pElement->IterateChildren(pTimerNode)) != NULL)
-    {
-      CStdString strTmp;
-      int iTmp;
-      PVRMovistarTimer timer;
-      time_t timeNow = time(NULL);
-      struct tm* now = localtime(&timeNow);
-
-      /* channel id */
-      if (!XMLUtils::GetInt(pTimerNode, "channelid", iTmp))
-        continue;
-      PVRMovistarChannel &channel = m_channels.at(iTmp - 1);
-      timer.iChannelId = channel.iUniqueId;
-
-      /* state */
-      if (XMLUtils::GetInt(pTimerNode, "state", iTmp))
-        timer.state = (PVR_TIMER_STATE) iTmp;
-
-      /* title */
-      if (!XMLUtils::GetString(pTimerNode, "title", strTmp))
-        continue;
-      timer.strTitle = strTmp;
-
-      /* summary */
-      if (!XMLUtils::GetString(pTimerNode, "summary", strTmp))
-        continue;
-      timer.strSummary = strTmp;
-
-      /* start time */
-      if (XMLUtils::GetString(pTimerNode, "starttime", strTmp))
-      {
-        CStdString::size_type delim = strTmp.Find(':');
-        if (delim != CStdString::npos)
-        {
-          now->tm_hour = (int)strtol(strTmp.Left(delim), NULL, 0);
-          now->tm_min  = (int)strtol(strTmp.Mid(delim + 1), NULL, 0);
-
-          timer.startTime = mktime(now);
-        }
-      }
-
-      /* end time */
-      if (XMLUtils::GetString(pTimerNode, "endtime", strTmp))
-      {
-        CStdString::size_type delim = strTmp.Find(':');
-        if (delim != CStdString::npos)
-        {
-          now->tm_hour = (int)strtol(strTmp.Left(delim), NULL, 0);
-          now->tm_min  = (int)strtol(strTmp.Mid(delim + 1), NULL, 0);
-
-          timer.endTime = mktime(now);
-        }
-      }
-
-      XBMC->Log(LOG_DEBUG, "loaded timer '%s' channel '%d' start '%d' end '%d'", timer.strTitle.c_str(), timer.iChannelId, timer.startTime, timer.endTime);
-      m_timers.push_back(timer);
-    }
-  }
-
-  return true;
 }
 
 int PVRMovistarData::GetChannelsAmount(void)
@@ -386,52 +147,52 @@ int PVRMovistarData::GetChannelsAmount(void)
 
 PVR_ERROR PVRMovistarData::GetChannels(ADDON_HANDLE handle, bool bRadio)
 {
-  for (unsigned int iChannelPtr = 0; iChannelPtr < m_channels.size(); iChannelPtr++)
-  {
-    PVRMovistarChannel &channel = m_channels.at(iChannelPtr);
-    if (channel.bRadio == bRadio)
-    {
-      PVR_CHANNEL xbmcChannel;
-      memset(&xbmcChannel, 0, sizeof(PVR_CHANNEL));
+	for (unsigned int iChannelPtr = 0; iChannelPtr < m_channels.size(); iChannelPtr++)
+	{
+		PVRMovistarChannel &channel = m_channels.at(iChannelPtr);
+		if (channel.bRadio == bRadio)
+		{
+			PVR_CHANNEL xbmcChannel;
+			memset(&xbmcChannel, 0, sizeof(PVR_CHANNEL));
 
-      xbmcChannel.iUniqueId         = channel.iUniqueId;
-      xbmcChannel.bIsRadio          = channel.bRadio;
-      xbmcChannel.iChannelNumber    = channel.iChannelNumber;
-      xbmcChannel.iSubChannelNumber = channel.iSubChannelNumber;
-      strncpy(xbmcChannel.strChannelName, channel.strChannelName.c_str(), sizeof(xbmcChannel.strChannelName) - 1);
-      strncpy(xbmcChannel.strStreamURL, channel.strStreamURL.c_str(), sizeof(xbmcChannel.strStreamURL) - 1);
-      xbmcChannel.iEncryptionSystem = channel.iEncryptionSystem;
-      strncpy(xbmcChannel.strIconPath, channel.strIconPath.c_str(), sizeof(xbmcChannel.strIconPath) - 1);
-      xbmcChannel.bIsHidden         = false;
+			xbmcChannel.iUniqueId         = channel.iUniqueId;
+			xbmcChannel.bIsRadio          = channel.bRadio;
+			xbmcChannel.iChannelNumber    = channel.iChannelNumber;
+			xbmcChannel.iSubChannelNumber = channel.iSubChannelNumber;
+			strncpy(xbmcChannel.strChannelName, channel.strChannelName.c_str(), sizeof(xbmcChannel.strChannelName) - 1);
+			strncpy(xbmcChannel.strStreamURL, channel.strStreamURL.c_str(), sizeof(xbmcChannel.strStreamURL) - 1);
+			xbmcChannel.iEncryptionSystem = channel.iEncryptionSystem;
+			strncpy(xbmcChannel.strIconPath, channel.strIconPath.c_str(), sizeof(xbmcChannel.strIconPath) - 1);
+			xbmcChannel.bIsHidden         = false;
 
-      PVR->TransferChannelEntry(handle, &xbmcChannel);
-    }
-  }
+			PVR->TransferChannelEntry(handle, &xbmcChannel);
+		}
+	}
 
-  return PVR_ERROR_NO_ERROR;
+	return PVR_ERROR_NO_ERROR;
 }
 
 bool PVRMovistarData::GetChannel(const PVR_CHANNEL &channel, PVRMovistarChannel &myChannel)
 {
-  for (unsigned int iChannelPtr = 0; iChannelPtr < m_channels.size(); iChannelPtr++)
-  {
-    PVRMovistarChannel &thisChannel = m_channels.at(iChannelPtr);
-    if (thisChannel.iUniqueId == (int) channel.iUniqueId)
-    {
-      myChannel.iUniqueId         = thisChannel.iUniqueId;
-      myChannel.bRadio            = thisChannel.bRadio;
-      myChannel.iChannelNumber    = thisChannel.iChannelNumber;
-      myChannel.iSubChannelNumber = thisChannel.iSubChannelNumber;
-      myChannel.iEncryptionSystem = thisChannel.iEncryptionSystem;
-      myChannel.strChannelName    = thisChannel.strChannelName;
-      myChannel.strIconPath       = thisChannel.strIconPath;
-      myChannel.strStreamURL      = thisChannel.strStreamURL;
+	for (unsigned int iChannelPtr = 0; iChannelPtr < m_channels.size(); iChannelPtr++)
+	{
+		PVRMovistarChannel &thisChannel = m_channels.at(iChannelPtr);
+		if (thisChannel.iUniqueId == (int) channel.iUniqueId)
+		{
+			myChannel.iUniqueId         = thisChannel.iUniqueId;
+			myChannel.bRadio            = thisChannel.bRadio;
+			myChannel.iChannelNumber    = thisChannel.iChannelNumber;
+			myChannel.iSubChannelNumber = thisChannel.iSubChannelNumber;
+			myChannel.iEncryptionSystem = thisChannel.iEncryptionSystem;
+			myChannel.strChannelName    = thisChannel.strChannelName;
+			myChannel.strIconPath       = thisChannel.strIconPath;
+			myChannel.strStreamURL      = thisChannel.strStreamURL;
 
-      return true;
-    }
-  }
+			return true;
+		}
+	}
 
-  return false;
+	return false;
 }
 
 int PVRMovistarData::GetChannelGroupsAmount(void)
@@ -483,12 +244,13 @@ PVR_ERROR PVRMovistarData::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR
       }
     }
   }
-
+ 
   return PVR_ERROR_NO_ERROR;
 }
 
 PVR_ERROR PVRMovistarData::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL &channel, time_t iStart, time_t iEnd)
 {
+
   if (m_iEpgStart == -1)
     m_iEpgStart = iStart;
 
@@ -531,7 +293,7 @@ PVR_ERROR PVRMovistarData::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANN
       iAddBroadcastId += myChannel.epg.size();
     }
   }
-
+  
   return PVR_ERROR_NO_ERROR;
 }
 

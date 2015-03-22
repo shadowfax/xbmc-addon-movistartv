@@ -17,6 +17,7 @@ include ../Makefile.include.am
 INCLUDES+=-Isrc -I@abs_top_srcdir@/lib/jsoncpp/include
 
 libpvrmovistartv_addon_la_SOURCES = src/client.cpp \
+									src/MovistarTVDVBSTP.cpp \
 									src/MovistarTVRPC.cpp \
                                     src/PVRMovistarData.cpp
 
