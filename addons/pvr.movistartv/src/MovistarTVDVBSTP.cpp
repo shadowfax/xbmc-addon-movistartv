@@ -246,9 +246,12 @@ namespace MovistarTV
 			bool demarcation_found = false;
 			bool got_push = false;
 			std::string my_domain_name;
+			char client_demarcation_buf[6];
+			memset(&client_demarcation_buf, 0, 6);
+			itoa(client.demarcation, client_demarcation_buf, 10);
 			my_domain_name.clear();
 			my_domain_name.append("DEM_");
-			my_domain_name.append(std::to_string(client.demarcation));
+			my_domain_name.append(client_demarcation_buf);
 			my_domain_name.append(".");
 			my_domain_name.append(platform.dvbConfig.dvbServiceProvider);
 			XBMC->Log(LOG_DEBUG, "Searching for %s\n", my_domain_name.c_str());
